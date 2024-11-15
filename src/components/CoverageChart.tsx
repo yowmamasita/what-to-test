@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { CoverageData } from '../types';
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
@@ -11,7 +11,7 @@ interface CoverageChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="backdrop-blur-xl bg-gray-800/70 p-4 rounded-lg border border-gray-700/50 shadow-xl">
+      <div className="backdrop-blur-2xl bg-gray-800/30 p-4 rounded-lg border border-white/10 shadow-xl ring-1 ring-white/10">
         <p className="text-gray-200 font-medium mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
@@ -39,9 +39,12 @@ export function CoverageChart({ data, onPageChange }: CoverageChartProps) {
     impact: item.impactScore,
   }));
 
-  useEffect(() => {
-    onPageChange(startIndex, endIndex);
-  }, [currentPage, onPageChange, startIndex, endIndex]);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    const newStartIndex = newPage * ITEMS_PER_PAGE;
+    const newEndIndex = newStartIndex + ITEMS_PER_PAGE;
+    onPageChange(newStartIndex, newEndIndex);
+  };
 
   return (
     <div className="space-y-4">
@@ -53,7 +56,7 @@ export function CoverageChart({ data, onPageChange }: CoverageChartProps) {
         >
           <Info className="w-5 h-5" />
           {showInfo && (
-            <div className="absolute right-0 top-full mt-2 w-80 p-4 rounded-lg backdrop-blur-xl bg-gray-800/70 border border-gray-700/50 shadow-xl z-10">
+            <div className="absolute right-0 top-full mt-2 w-80 p-4 rounded-lg backdrop-blur-2xl bg-gray-800/30 border border-white/10 shadow-xl ring-1 ring-white/10 z-10">
               <h4 className="text-gray-200 font-medium mb-2">How we calculate impact:</h4>
               <p className="text-sm text-gray-300 mb-3">
                 Impact Score = (100 - coverage%) × log(total statements + 1) × log(uncovered blocks + 1)
@@ -68,7 +71,23 @@ export function CoverageChart({ data, onPageChange }: CoverageChartProps) {
 
       <div className="w-full h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+          <BarChart 
+            data={chartData} 
+            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            style={{
+              '& .recharts-tooltip-cursor': {
+                fill: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(8px)',
+                mixBlendMode: 'overlay'
+              }
+            }}
+          >
+            <defs>
+              <linearGradient id="hoverGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.1)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} />
             <XAxis
               dataKey="name"
@@ -90,7 +109,17 @@ export function CoverageChart({ data, onPageChange }: CoverageChartProps) {
               stroke="#82ca9d"
               tick={{ fill: '#9CA3AF' }}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip 
+              content={<CustomTooltip />}
+              cursor={{ 
+                fill: 'url(#hoverGradient)',
+                opacity: 0.3,
+                style: { 
+                  backdropFilter: 'blur(8px)',
+                  transition: 'all 0.2s ease'
+                }
+              }}
+            />
             <Bar yAxisId="left" dataKey="coverage" fill="#8884d8" name="Coverage %" />
             <Bar yAxisId="right" dataKey="impact" fill="#82ca9d" name="Impact Score" />
           </BarChart>
@@ -100,7 +129,7 @@ export function CoverageChart({ data, onPageChange }: CoverageChartProps) {
       {totalPages > 1 && (
         <div className="flex justify-center items-center space-x-4">
           <button
-            onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+            onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             disabled={currentPage === 0}
             className="p-2 rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -110,7 +139,7 @@ export function CoverageChart({ data, onPageChange }: CoverageChartProps) {
             Page {currentPage + 1} of {totalPages}
           </span>
           <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+            onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
             disabled={currentPage === totalPages - 1}
             className="p-2 rounded-full hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
